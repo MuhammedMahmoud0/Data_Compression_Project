@@ -10,6 +10,32 @@ import os
 import io
 
 # ==============================================================================
+#  MODERN UI STYLING
+# ==============================================================================
+
+
+class ModernStyle:
+    """Modern color scheme and styling constants"""
+
+    BG_PRIMARY = "#f5f6fa"
+    BG_SECONDARY = "#ffffff"
+    BG_ACCENT = "#4a90e2"
+    BG_ACCENT_HOVER = "#357abd"
+    TEXT_PRIMARY = "#2c3e50"
+    TEXT_SECONDARY = "#7f8c8d"
+    TEXT_ACCENT = "#4a90e2"
+    BORDER_COLOR = "#dfe4ea"
+    SUCCESS_COLOR = "#27ae60"
+    WARNING_COLOR = "#f39c12"
+    ERROR_COLOR = "#e74c3c"
+    FONT_FAMILY = "Segoe UI"
+    FONT_TITLE = (FONT_FAMILY, 16, "bold")
+    FONT_HEADING = (FONT_FAMILY, 11, "bold")
+    FONT_NORMAL = (FONT_FAMILY, 10)
+    FONT_SMALL = (FONT_FAMILY, 9)
+
+
+# ==============================================================================
 #  ALGORITHMS & HELPERS
 # ==============================================================================
 
@@ -28,36 +54,23 @@ def calculate_entropy(text):
 
 
 def calculate_avg_length_formula(text, codes_map):
-    """
-    Calculates Avg Length = Sum(P(c) * Bits(c))
-    codes_map: dict {char: bit_length}
-    """
     if not text:
         return 0.0
-
     counts = Counter(text)
     total_chars = len(text)
     avg_len = 0.0
-
     for char, count in counts.items():
         p = count / total_chars
-        # Use provided bit length, or 0 if missing (shouldn't happen in valid encoding)
         bit_len = codes_map.get(char, 0)
         avg_len += p * bit_len
-
     return avg_len
 
 
-# ---------------------------- RLE (Fixed with Delimiter) ----------------------------
 def run_length_encode(data: str) -> str:
     if not data:
         return ""
-
     encoded = []
     count = 1
-    # Use '|' as delimiter to separate count and character safely
-    # Format: "count|char"
-
     for i in range(1, len(data)):
         if data[i] == data[i - 1]:
             count += 1
@@ -65,36 +78,27 @@ def run_length_encode(data: str) -> str:
             encoded.append(f"{count}|{data[i - 1]}")
             count = 1
     encoded.append(f"{count}|{data[-1]}")
-
     return "".join(encoded)
 
 
 def run_length_decode(encoded: str) -> str:
     decoded = []
-    # Loop through the string, parsing "number|char"
     i = 0
     n = len(encoded)
     while i < n:
-        # 1. Parse Count (read until '|')
         count_str = ""
         while i < n and encoded[i] != "|":
             count_str += encoded[i]
             i += 1
-
-        # Skip the '|'
         i += 1
-
-        # 2. Parse Character (next char)
         if i < n:
             char = encoded[i]
             if count_str.isdigit():
                 decoded.append(char * int(count_str))
             i += 1
-
     return "".join(decoded)
 
 
-# ---------------------------- Huffman ----------------------------
 def build_frequency(text):
     return Counter(text)
 
@@ -138,7 +142,6 @@ def huffman_decode(encoded_text, codes):
     return decoded_text
 
 
-# ---------------------------- Golomb ----------------------------
 def unary_encode(q: int) -> str:
     return "1" * q + "0"
 
@@ -147,8 +150,7 @@ def golomb_encode(n: int, m: int) -> str:
     q = n // m
     r = n % m
     quotient_code = unary_encode(q)
-
-    if (m & (m - 1)) == 0:  # Power of 2
+    if (m & (m - 1)) == 0:
         k = int(math.log2(m))
         remainder_code = format(r, f"0{k}b")
     else:
@@ -165,7 +167,6 @@ def golomb_decode_stream(bitstream, m):
     decoded_text = ""
     idx = 0
     n_len = len(bitstream)
-
     if (m & (m - 1)) == 0:
         k = int(math.log2(m))
         is_power_2 = True
@@ -173,14 +174,12 @@ def golomb_decode_stream(bitstream, m):
         b = math.ceil(math.log2(m))
         T = 2**b - m
         is_power_2 = False
-
     while idx < n_len:
         q = 0
         while idx < n_len and bitstream[idx] == "1":
             q += 1
             idx += 1
         idx += 1
-
         r = 0
         if is_power_2:
             if idx + k > n_len:
@@ -210,11 +209,9 @@ def golomb_decode_stream(bitstream, m):
 
 
 def get_golomb_bits_len(val, m):
-    """Helper to get length of Golomb code for a value without building string"""
     q = val // m
     r = val % m
     len_unary = q + 1
-
     if (m & (m - 1)) == 0:
         k = int(math.log2(m))
         len_rem = k
@@ -225,11 +222,9 @@ def get_golomb_bits_len(val, m):
             len_rem = b - 1
         else:
             len_rem = b
-
     return len_unary + len_rem
 
 
-# ---------------------------- LZW ----------------------------
 def lzw_encode(text):
     dictionary = {chr(i): i for i in range(256)}
     next_code = 256
@@ -268,7 +263,6 @@ def lzw_decode(codes):
     return result
 
 
-# ---------------------------- Uniform Quantization ----------------------------
 def uniform_quantization(data, num_levels):
     data = np.array(data)
     data_min, data_max = np.min(data), np.max(data)
@@ -280,152 +274,294 @@ def uniform_quantization(data, num_levels):
 
 
 # ==============================================================================
-#  GUI IMPLEMENTATION
+#  MAIN APPLICATION
 # ==============================================================================
 
 
 class CompressionApp(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Compression Algorithms Project")
-        self.geometry("1200x850")
+        self.title("Compression Algorithms Suite")
+        self.geometry("1300x900")
+        self.configure(bg=ModernStyle.BG_PRIMARY)
 
         self.lossless_file_content = ""
         self.lossless_encoded_data = None
         self.lossless_extra_data = None
-
         self.lossy_original_filepath = None
         self.lossy_image = None
         self.lossy_quantized_image = None
 
+        self.setup_styles()
         self.create_widgets()
 
+    def setup_styles(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        style.configure("TNotebook", background=ModernStyle.BG_PRIMARY, borderwidth=0)
+        style.configure(
+            "TNotebook.Tab",
+            padding=[20, 10],
+            background=ModernStyle.BG_SECONDARY,
+            foreground=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        )
+        style.map(
+            "TNotebook.Tab",
+            background=[("selected", ModernStyle.BG_ACCENT)],
+            foreground=[("selected", "white")],
+        )
+
+        style.configure("Card.TFrame", background=ModernStyle.BG_SECONDARY)
+        style.configure("TFrame", background=ModernStyle.BG_PRIMARY)
+        style.configure(
+            "TLabel",
+            background=ModernStyle.BG_PRIMARY,
+            foreground=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_NORMAL,
+        )
+        style.configure("Card.TLabel", background=ModernStyle.BG_SECONDARY)
+        style.configure(
+            "TButton",
+            font=ModernStyle.FONT_NORMAL,
+            borderwidth=0,
+            relief="flat",
+            padding=[20, 8],
+        )
+        style.configure(
+            "TRadiobutton",
+            background=ModernStyle.BG_SECONDARY,
+            foreground=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_NORMAL,
+        )
+
     def create_widgets(self):
-        main_tab_control = ttk.Notebook(self)
+        header = tk.Frame(self, bg=ModernStyle.BG_ACCENT, height=60)
+        header.pack(fill="x", side="top")
+        header.pack_propagate(False)
+
+        title_label = tk.Label(
+            header,
+            text="🗜️ Compression Algorithms Suite",
+            bg=ModernStyle.BG_ACCENT,
+            fg="white",
+            font=ModernStyle.FONT_TITLE,
+        )
+        title_label.pack(pady=15, padx=20, side="left")
+
+        content = tk.Frame(self, bg=ModernStyle.BG_PRIMARY)
+        content.pack(fill="both", expand=True, padx=10, pady=10)
+
+        main_tab_control = ttk.Notebook(content)
         self.tab_lossless = ttk.Frame(main_tab_control)
         self.tab_lossy = ttk.Frame(main_tab_control)
 
-        main_tab_control.add(self.tab_lossless, text="Lossless Compression")
-        main_tab_control.add(self.tab_lossy, text="Lossy Compression")
+        main_tab_control.add(self.tab_lossless, text="📝 Lossless Compression")
+        main_tab_control.add(self.tab_lossy, text="🖼️ Lossy Compression")
         main_tab_control.pack(expand=1, fill="both")
 
         self.setup_lossless_tab()
         self.setup_lossy_tab()
 
-    # ================= LOSSLESS TAB =================
     def setup_lossless_tab(self):
         frame = self.tab_lossless
+        container = tk.Frame(frame, bg=ModernStyle.BG_PRIMARY)
+        container.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # --- Left Panel ---
-        left_panel = ttk.Frame(frame, padding=10)
-        left_panel.pack(side="left", fill="y")
+        # Left Panel
+        left_panel = tk.Frame(
+            container, bg=ModernStyle.BG_SECONDARY, relief="flat", bd=1
+        )
+        left_panel.pack(side="left", fill="y", padx=(0, 10))
+        left_panel.configure(width=320)
+        left_panel.pack_propagate(False)
 
-        ttk.Label(
-            left_panel, text="1. Select Algorithm:", font=("Arial", 10, "bold")
-        ).pack(anchor="w", pady=5)
+        algo_card = tk.Frame(left_panel, bg=ModernStyle.BG_SECONDARY)
+        algo_card.pack(fill="x", padx=15, pady=15)
+
+        tk.Label(
+            algo_card,
+            text="Select Algorithm",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        ).pack(anchor="w", pady=(0, 10))
+
         self.algo_var = tk.StringVar(value="RLE")
         algos = [
-            ("Run-Length Encoding (RLE)", "RLE"),
-            ("Huffman Coding", "Huffman"),
-            ("Golomb Coding", "Golomb"),
-            ("LZW Coding", "LZW"),
+            ("🔄 Run-Length Encoding", "RLE"),
+            ("🌳 Huffman Coding", "Huffman"),
+            ("📊 Golomb Coding", "Golomb"),
+            ("📚 LZW Coding", "LZW"),
         ]
+
         for text, val in algos:
             ttk.Radiobutton(
-                left_panel, text=text, variable=self.algo_var, value=val
-            ).pack(anchor="w")
+                algo_card,
+                text=text,
+                variable=self.algo_var,
+                value=val,
+                style="TRadiobutton",
+            ).pack(anchor="w", pady=3)
 
-        ttk.Separator(left_panel, orient="horizontal").pack(fill="x", pady=10)
-
-        self.dnd_lbl = ttk.Label(
-            left_panel,
-            text="Drag & Drop Text File Here\n(or click to browse)",
-            relief="sunken",
-            anchor="center",
-            background="#e1e1e1",
-            padding=20,
+        tk.Frame(left_panel, bg=ModernStyle.BORDER_COLOR, height=1).pack(
+            fill="x", pady=15
         )
-        self.dnd_lbl.pack(fill="x", pady=10, ipady=10)
+
+        upload_frame = tk.Frame(left_panel, bg=ModernStyle.BG_SECONDARY)
+        upload_frame.pack(fill="x", padx=15)
+
+        tk.Label(
+            upload_frame,
+            text="Input File",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        ).pack(anchor="w", pady=(0, 10))
+
+        self.dnd_lbl = tk.Label(
+            upload_frame,
+            text="📁\n\nDrag & Drop Text File\nor click to browse",
+            bg="#f8f9fa",
+            fg=ModernStyle.TEXT_SECONDARY,
+            font=ModernStyle.FONT_NORMAL,
+            relief="solid",
+            bd=1,
+            cursor="hand2",
+            justify="center",
+        )
+        self.dnd_lbl.pack(fill="x", ipady=30)
         self.dnd_lbl.drop_target_register(DND_FILES)
         self.dnd_lbl.dnd_bind("<<Drop>>", self.on_drop_text_file)
         self.dnd_lbl.bind("<Button-1>", self.on_browse_text)
 
-        ttk.Separator(left_panel, orient="horizontal").pack(fill="x", pady=10)
+        tk.Frame(left_panel, bg=ModernStyle.BORDER_COLOR, height=1).pack(
+            fill="x", pady=15
+        )
+
+        btn_frame = tk.Frame(left_panel, bg=ModernStyle.BG_SECONDARY)
+        btn_frame.pack(fill="x", padx=15, pady=(0, 15))
 
         self.btn_compress = ttk.Button(
-            left_panel, text="Compress Data", command=self.perform_compression
+            btn_frame, text="▶ Compress Data", command=self.perform_compression
         )
         self.btn_compress.pack(fill="x", pady=5)
 
         self.btn_decompress = ttk.Button(
-            left_panel,
-            text="Decompress Result",
+            btn_frame,
+            text="◀ Decompress Result",
             command=self.perform_decompression,
             state="disabled",
         )
         self.btn_decompress.pack(fill="x", pady=5)
 
-        # --- Statistics Panel (Lossless) ---
-        stats_frame = ttk.LabelFrame(
-            left_panel, text="Statistics Dashboard", padding=10
-        )
-        stats_frame.pack(fill="x", pady=20)
-
-        # Grid layout for stats
-        self.lbl_file_before = ttk.Label(stats_frame, text="Size Before: - bits")
-        self.lbl_file_before.grid(row=0, column=0, sticky="w", pady=2)
-
-        self.lbl_file_after = ttk.Label(stats_frame, text="Size After: - bits")
-        self.lbl_file_after.grid(row=1, column=0, sticky="w", pady=2)
-
-        self.lbl_ratio = ttk.Label(stats_frame, text="Compression Ratio: -")
-        self.lbl_ratio.grid(row=2, column=0, sticky="w", pady=2)
-
-        ttk.Separator(stats_frame, orient="horizontal").grid(
-            row=3, column=0, sticky="ew", pady=5
+        tk.Frame(left_panel, bg=ModernStyle.BORDER_COLOR, height=1).pack(
+            fill="x", pady=15
         )
 
-        self.lbl_entropy = ttk.Label(
-            stats_frame, text="Entropy: -", foreground="purple"
-        )
-        self.lbl_entropy.grid(row=4, column=0, sticky="w", pady=2)
+        stats_frame = tk.Frame(left_panel, bg=ModernStyle.BG_SECONDARY)
+        stats_frame.pack(fill="x", padx=15, pady=(0, 15))
 
-        self.lbl_avg_len = ttk.Label(stats_frame, text="Avg Length: - bits/sym")
-        self.lbl_avg_len.grid(row=5, column=0, sticky="w", pady=2)
-
-        self.lbl_eff = ttk.Label(
+        tk.Label(
             stats_frame,
-            text="Efficiency: -",
-            foreground="green",
-            font=("Arial", 9, "bold"),
+            text="Statistics",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        ).pack(anchor="w", pady=(0, 10))
+
+        stats_grid = tk.Frame(stats_frame, bg=ModernStyle.BG_SECONDARY)
+        stats_grid.pack(fill="x")
+
+        self.lbl_file_before = self.create_stat_label(
+            stats_grid, "Size Before:", "- bits"
         )
-        self.lbl_eff.grid(row=6, column=0, sticky="w", pady=(5, 0))
+        self.lbl_file_after = self.create_stat_label(
+            stats_grid, "Size After:", "- bits"
+        )
+        self.lbl_ratio = self.create_stat_label(stats_grid, "Compression Ratio:", "-")
 
-        ttk.Label(
-            stats_frame, text="(Entropy / Avg Length) * 100", font=("Arial", 7)
-        ).grid(row=7, column=0, sticky="w")
+        tk.Frame(stats_grid, bg=ModernStyle.BORDER_COLOR, height=1).pack(
+            fill="x", pady=8
+        )
 
-        # --- Right Panel ---
-        right_panel = ttk.Frame(frame, padding=10)
+        self.lbl_entropy = self.create_stat_label(
+            stats_grid, "Entropy:", "-", ModernStyle.TEXT_ACCENT
+        )
+        self.lbl_avg_len = self.create_stat_label(
+            stats_grid, "Avg Length:", "- bits/sym"
+        )
+        self.lbl_eff = self.create_stat_label(
+            stats_grid, "Efficiency:", "-", ModernStyle.SUCCESS_COLOR
+        )
+
+        # Right Panel
+        right_panel = tk.Frame(
+            container, bg=ModernStyle.BG_SECONDARY, relief="flat", bd=1
+        )
         right_panel.pack(side="right", fill="both", expand=True)
 
-        ttk.Label(
-            right_panel, text="Original Text Input:", font=("Arial", 9, "bold")
-        ).pack(anchor="w")
-        self.text_input = tk.Text(right_panel, height=8, width=50)
-        self.text_input.pack(fill="x", pady=(0, 10))
+        right_inner = tk.Frame(right_panel, bg=ModernStyle.BG_SECONDARY)
+        right_inner.pack(fill="both", expand=True, padx=20, pady=20)
 
-        ttk.Label(
-            right_panel, text="Compressed Output:", font=("Arial", 9, "bold")
-        ).pack(anchor="w")
-        self.text_output = tk.Text(right_panel, height=8, width=50, bg="#f0f8ff")
-        self.text_output.pack(fill="x", pady=(0, 10))
+        self.create_text_section(right_inner, "Original Text Input", "text_input")
+        self.create_text_section(
+            right_inner, "Compressed Output", "text_output", bg="#f0f8ff"
+        )
+        self.create_text_section(
+            right_inner, "Decompressed Verification", "text_check", bg="#f0fff0"
+        )
 
-        ttk.Label(
-            right_panel, text="Decompressed Verification:", font=("Arial", 9, "bold")
-        ).pack(anchor="w")
-        self.text_check = tk.Text(right_panel, height=8, width=50, bg="#f0fff0")
-        self.text_check.pack(fill="x")
+    def create_stat_label(self, parent, label, value, color=None):
+        frame = tk.Frame(parent, bg=ModernStyle.BG_SECONDARY)
+        frame.pack(fill="x", pady=3)
+
+        tk.Label(
+            frame,
+            text=label,
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_SECONDARY,
+            font=ModernStyle.FONT_SMALL,
+            anchor="w",
+        ).pack(side="left")
+
+        val_label = tk.Label(
+            frame,
+            text=value,
+            bg=ModernStyle.BG_SECONDARY,
+            fg=color or ModernStyle.TEXT_PRIMARY,
+            font=(ModernStyle.FONT_FAMILY, 10, "bold"),
+            anchor="e",
+        )
+        val_label.pack(side="right")
+        return val_label
+
+    def create_text_section(self, parent, title, attr_name, bg="#ffffff"):
+        section = tk.Frame(parent, bg=ModernStyle.BG_SECONDARY)
+        section.pack(fill="both", expand=True, pady=(0, 15))
+
+        tk.Label(
+            section,
+            text=title,
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        ).pack(anchor="w", pady=(0, 5))
+
+        text_widget = tk.Text(
+            section,
+            height=8,
+            width=50,
+            font=ModernStyle.FONT_NORMAL,
+            bg=bg,
+            relief="solid",
+            bd=1,
+            padx=10,
+            pady=10,
+        )
+        text_widget.pack(fill="both", expand=True)
+        setattr(self, attr_name, text_widget)
 
     def load_text_content(self, filepath):
         try:
@@ -438,6 +574,11 @@ class CompressionApp(TkinterDnD.Tk):
             self.text_check.delete(1.0, tk.END)
             self.btn_decompress.config(state="disabled")
             self.reset_lossless_stats()
+            self.dnd_lbl.config(
+                text=f"✓ Loaded\n{os.path.basename(filepath)}",
+                bg="#d4edda",
+                fg=ModernStyle.SUCCESS_COLOR,
+            )
         except Exception as e:
             messagebox.showerror("Error", f"Could not read file: {e}")
 
@@ -455,44 +596,31 @@ class CompressionApp(TkinterDnD.Tk):
             self.load_text_content(filepath)
 
     def reset_lossless_stats(self):
-        self.lbl_file_before.config(text="Size Before: - bits")
-        self.lbl_file_after.config(text="Size After: - bits")
-        self.lbl_ratio.config(text="Compression Ratio: -")
-        self.lbl_entropy.config(text="Entropy: -")
-        self.lbl_avg_len.config(text="Avg Length: -")
-        self.lbl_eff.config(text="Efficiency: -")
+        self.lbl_file_before.config(text="- bits")
+        self.lbl_file_after.config(text="- bits")
+        self.lbl_ratio.config(text="-")
+        self.lbl_entropy.config(text="-")
+        self.lbl_avg_len.config(text="-")
+        self.lbl_eff.config(text="-")
 
     def update_lossless_stats(self, text, compressed_bits, avg_len_override=None):
         total_chars = len(text)
         if total_chars == 0:
             return
-
         original_bits = total_chars * 8
-
-        # 1. Entropy
         entropy = calculate_entropy(text)
-
-        # 2. Avg Length
-        # If an override is provided (from Sum(P*Bits)), use it.
-        # Otherwise, calculate effective average (Total Bits / Count).
         if avg_len_override:
             avg_length = avg_len_override
         else:
             avg_length = compressed_bits / total_chars
-
-        # 3. Efficiency = (Entropy / Avg Length) * 100
         efficiency = ((entropy / avg_length) * 100) if avg_length > 0 else 0.0
-
-        # 4. Compression Ratio
         ratio = original_bits / compressed_bits if compressed_bits > 0 else 0
-
-        # Update Labels
-        self.lbl_file_before.config(text=f"Size Before: {original_bits:,} bits")
-        self.lbl_file_after.config(text=f"Size After: {compressed_bits:,} bits")
-        self.lbl_ratio.config(text=f"Compression Ratio: {ratio:.2f}")
-        self.lbl_entropy.config(text=f"Entropy: {entropy:.4f}")
-        self.lbl_avg_len.config(text=f"Avg Length: {avg_length:.4f} bits/sym")
-        self.lbl_eff.config(text=f"Efficiency: {efficiency:.2f}%")
+        self.lbl_file_before.config(text=f"{original_bits:,}")
+        self.lbl_file_after.config(text=f"{compressed_bits:,}")
+        self.lbl_ratio.config(text=f"{ratio:.2f}")
+        self.lbl_entropy.config(text=f"{entropy:.4f}")
+        self.lbl_avg_len.config(text=f"{avg_length:.4f}")
+        self.lbl_eff.config(text=f"{efficiency:.2f}%")
 
     def perform_compression(self):
         algo = self.algo_var.get()
@@ -500,20 +628,14 @@ class CompressionApp(TkinterDnD.Tk):
         if not text:
             messagebox.showwarning("Warning", "No text to compress.")
             return
-
         compressed_bits = 0
-        avg_len_formula = None  # Will hold result of Sum(P*Bits) if applicable
-
+        avg_len_formula = None
         try:
             if algo == "RLE":
-                # RLE encodes text -> "3|A2|B" -> calculate bits as chars * 8
                 self.lossless_encoded_data = run_length_encode(text)
                 display_text = self.lossless_encoded_data
                 self.lossless_extra_data = None
-
-                # Compressed size in bits (assuming ASCII output)
                 compressed_bits = len(self.lossless_encoded_data) * 8
-
             elif algo == "Huffman":
                 freq = build_frequency(text)
                 heap = build_heap(freq)
@@ -523,18 +645,12 @@ class CompressionApp(TkinterDnD.Tk):
                 self.lossless_extra_data = codes
                 display_text = f"Bits: {encoded}\n\nCodes: {codes}"
                 compressed_bits = len(encoded)
-
-                # Calculate Avg Length using Sum(P * Bits)
-                # codes map is {char: '010'} -> length is len('010')
                 bit_lengths = {char: len(code) for char, code in codes.items()}
                 avg_len_formula = calculate_avg_length_formula(text, bit_lengths)
-
             elif algo == "Golomb":
-                # --- AUTOMATIC GRID SEARCH ---
                 freqs = Counter(text)
                 best_m = 2
                 min_total_bits = float("inf")
-
                 for m_candidate in range(2, 256):
                     current_bits = 0
                     for char, freq in freqs.items():
@@ -543,43 +659,28 @@ class CompressionApp(TkinterDnD.Tk):
                     if current_bits < min_total_bits:
                         min_total_bits = current_bits
                         best_m = m_candidate
-
-                # Compress with Best M
                 encoded_stream = ""
-                # We can construct the bitstream or just calculate size.
-                # Let's construct for display.
-                # Map for Avg Length Calculation
                 bit_lengths = {}
-
                 for char in text:
                     code = golomb_encode(ord(char), best_m)
                     encoded_stream += code
                     if char not in bit_lengths:
                         bit_lengths[char] = len(code)
-
                 self.lossless_encoded_data = encoded_stream
                 self.lossless_extra_data = best_m
                 display_text = f"Best M found: {best_m}\nBitstream:\n{encoded_stream}"
                 compressed_bits = len(encoded_stream)
-
-                # Calculate Avg Length using Sum(P * Bits)
                 avg_len_formula = calculate_avg_length_formula(text, bit_lengths)
-
             elif algo == "LZW":
                 compressed, dictionary = lzw_encode(text)
                 self.lossless_encoded_data = compressed
                 self.lossless_extra_data = None
                 display_text = f"Indices: {compressed}"
-                # Estimate: Each index 12 bits
                 compressed_bits = len(compressed) * 12
-
             self.text_output.delete(1.0, tk.END)
             self.text_output.insert(tk.END, display_text)
             self.btn_decompress.config(state="normal")
-
-            # Update Statistics
             self.update_lossless_stats(text, compressed_bits, avg_len_formula)
-
         except Exception as e:
             messagebox.showerror("Compression Error", str(e))
 
@@ -604,76 +705,153 @@ class CompressionApp(TkinterDnD.Tk):
         except Exception as e:
             messagebox.showerror("Decompression Error", str(e))
 
-    # ================= LOSSY TAB (Unchanged Logic) =================
     def setup_lossy_tab(self):
         frame = self.tab_lossy
-        controls = ttk.Frame(frame, padding=10)
-        controls.pack(side="top", fill="x")
+        container = tk.Frame(frame, bg=ModernStyle.BG_PRIMARY)
+        container.pack(fill="both", expand=True, padx=20, pady=20)
 
-        self.dnd_img_lbl = ttk.Label(
-            controls,
-            text="Drag & Drop Image Here",
-            relief="sunken",
-            anchor="center",
-            background="#e1e1e1",
-            padding=10,
+        top_card = tk.Frame(container, bg=ModernStyle.BG_SECONDARY, relief="flat", bd=1)
+        top_card.pack(fill="x", pady=(0, 15))
+
+        controls = tk.Frame(top_card, bg=ModernStyle.BG_SECONDARY)
+        controls.pack(fill="x", padx=20, pady=15)
+
+        upload_section = tk.Frame(controls, bg=ModernStyle.BG_SECONDARY)
+        upload_section.pack(side="left", fill="x", expand=True)
+
+        self.dnd_img_lbl = tk.Label(
+            upload_section,
+            text="📁 Drag & Drop Image Here or Click to Browse",
+            bg="#f8f9fa",
+            fg=ModernStyle.TEXT_SECONDARY,
+            font=ModernStyle.FONT_NORMAL,
+            relief="solid",
+            bd=1,
+            cursor="hand2",
         )
-        self.dnd_img_lbl.pack(side="left", fill="x", expand=True, padx=5)
+        self.dnd_img_lbl.pack(fill="x", ipady=15)
         self.dnd_img_lbl.drop_target_register(DND_FILES)
         self.dnd_img_lbl.dnd_bind("<<Drop>>", self.on_drop_image)
         self.dnd_img_lbl.bind("<Button-1>", self.on_browse_image)
 
-        setting_frame = ttk.Frame(controls)
-        setting_frame.pack(side="left", padx=20)
-        ttk.Label(setting_frame, text="Quantization Levels:").pack(side="left")
+        settings_section = tk.Frame(controls, bg=ModernStyle.BG_SECONDARY)
+        settings_section.pack(side="left", padx=20)
+
+        tk.Label(
+            settings_section,
+            text="Quantization Levels:",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_NORMAL,
+        ).pack(side="left", padx=(0, 10))
+
         self.quant_levels = tk.IntVar(value=4)
         tk.Spinbox(
-            setting_frame, from_=2, to=256, textvariable=self.quant_levels, width=5
-        ).pack(side="left", padx=5)
+            settings_section,
+            from_=2,
+            to=256,
+            textvariable=self.quant_levels,
+            width=6,
+            font=ModernStyle.FONT_NORMAL,
+        ).pack(side="left")
+
+        btn_section = tk.Frame(controls, bg=ModernStyle.BG_SECONDARY)
+        btn_section.pack(side="left", padx=10)
 
         ttk.Button(
-            controls, text="Apply Quantization", command=self.perform_quantization
-        ).pack(side="left", padx=10)
-        self.btn_save_img = ttk.Button(
-            controls,
-            text="Save Compressed Image",
-            command=self.save_image,
-            state="disabled",
-        )
-        self.btn_save_img.pack(side="left", padx=10)
+            btn_section, text="▶ Apply Quantization", command=self.perform_quantization
+        ).pack(side="left", padx=5)
 
-        stats_frame = ttk.Frame(frame, padding=5)
-        stats_frame.pack(side="top", fill="x", padx=10)
-        self.lbl_lossy_orig_size = ttk.Label(
-            stats_frame, text="Orig Size: - KB", font=("Arial", 9)
+        self.btn_save_img = ttk.Button(
+            btn_section, text="💾 Save Image", command=self.save_image, state="disabled"
+        )
+        self.btn_save_img.pack(side="left", padx=5)
+
+        stats_card = tk.Frame(
+            container, bg=ModernStyle.BG_SECONDARY, relief="flat", bd=1
+        )
+        stats_card.pack(fill="x", pady=(0, 15))
+
+        stats_inner = tk.Frame(stats_card, bg=ModernStyle.BG_SECONDARY)
+        stats_inner.pack(fill="x", padx=20, pady=10)
+
+        self.lbl_lossy_orig_size = tk.Label(
+            stats_inner,
+            text="Original Size: - KB",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_NORMAL,
         )
         self.lbl_lossy_orig_size.pack(side="left", padx=10)
-        self.lbl_lossy_comp_size = ttk.Label(
-            stats_frame, text="Compressed Size: - KB", font=("Arial", 9)
+
+        self.lbl_lossy_comp_size = tk.Label(
+            stats_inner,
+            text="Compressed Size: - KB",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_NORMAL,
         )
         self.lbl_lossy_comp_size.pack(side="left", padx=10)
-        self.lbl_lossy_stats = ttk.Label(
-            stats_frame,
+
+        self.lbl_lossy_stats = tk.Label(
+            stats_inner,
             text="Ratio: - | Efficiency: -",
-            font=("Arial", 9, "bold"),
-            foreground="blue",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.SUCCESS_COLOR,
+            font=(ModernStyle.FONT_FAMILY, 10, "bold"),
         )
         self.lbl_lossy_stats.pack(side="left", padx=10)
 
-        self.img_display_frame = ttk.Frame(frame)
-        self.img_display_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        self.lbl_orig_img = ttk.Label(self.img_display_frame, text="Original Image")
-        self.lbl_orig_img.grid(row=0, column=0, padx=10)
-        self.lbl_quant_img = ttk.Label(self.img_display_frame, text="Quantized Image")
-        self.lbl_quant_img.grid(row=0, column=1, padx=10)
+        images_card = tk.Frame(
+            container, bg=ModernStyle.BG_SECONDARY, relief="flat", bd=1
+        )
+        images_card.pack(fill="both", expand=True)
+
+        self.img_display_frame = tk.Frame(images_card, bg=ModernStyle.BG_SECONDARY)
+        self.img_display_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        left_img = tk.Frame(self.img_display_frame, bg=ModernStyle.BG_SECONDARY)
+        left_img.grid(row=0, column=0, padx=10, sticky="nsew")
+
+        tk.Label(
+            left_img,
+            text="Original Image",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        ).pack(pady=(0, 10))
+
         self.canvas_orig = tk.Canvas(
-            self.img_display_frame, bg="gray", width=500, height=500
+            left_img,
+            bg="#f8f9fa",
+            width=500,
+            height=500,
+            highlightthickness=1,
+            highlightbackground=ModernStyle.BORDER_COLOR,
         )
-        self.canvas_orig.grid(row=1, column=0, sticky="nsew")
+        self.canvas_orig.pack()
+
+        right_img = tk.Frame(self.img_display_frame, bg=ModernStyle.BG_SECONDARY)
+        right_img.grid(row=0, column=1, padx=10, sticky="nsew")
+
+        tk.Label(
+            right_img,
+            text="Quantized Image",
+            bg=ModernStyle.BG_SECONDARY,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=ModernStyle.FONT_HEADING,
+        ).pack(pady=(0, 10))
+
         self.canvas_quant = tk.Canvas(
-            self.img_display_frame, bg="gray", width=500, height=500
+            right_img,
+            bg="#f8f9fa",
+            width=500,
+            height=500,
+            highlightthickness=1,
+            highlightbackground=ModernStyle.BORDER_COLOR,
         )
-        self.canvas_quant.grid(row=1, column=1, sticky="nsew")
+        self.canvas_quant.pack()
+
         self.img_display_frame.columnconfigure(0, weight=1)
         self.img_display_frame.columnconfigure(1, weight=1)
 
@@ -684,7 +862,7 @@ class CompressionApp(TkinterDnD.Tk):
             self.lossy_image = img
             file_size_bytes = os.path.getsize(filepath)
             self.lbl_lossy_orig_size.config(
-                text=f"Orig Size: {file_size_bytes/1024:.2f} KB"
+                text=f"Original Size: {file_size_bytes/1024:.2f} KB"
             )
             self.lbl_lossy_comp_size.config(text="Compressed Size: -")
             self.lbl_lossy_stats.config(text="Ratio: - | Efficiency: -")
@@ -695,6 +873,11 @@ class CompressionApp(TkinterDnD.Tk):
             self.canvas_orig.create_image(250, 250, image=tk_img, anchor="center")
             self.canvas_orig.image = tk_img
             self.canvas_quant.delete("all")
+            self.dnd_img_lbl.config(
+                text=f"✓ Loaded: {os.path.basename(filepath)}",
+                bg="#d4edda",
+                fg=ModernStyle.SUCCESS_COLOR,
+            )
         except Exception as e:
             messagebox.showerror("Error", f"Invalid Image: {e}")
 
@@ -744,9 +927,7 @@ class CompressionApp(TkinterDnD.Tk):
         ratio = orig_bytes / comp_bytes
         efficiency = (1 - (comp_bytes / orig_bytes)) * 100
         diff = orig_bytes - comp_bytes
-        self.lbl_lossy_comp_size.config(
-            text=f"Est. Compressed: {comp_bytes/1024:.2f} KB"
-        )
+        self.lbl_lossy_comp_size.config(text=f"Compressed: {comp_bytes/1024:.2f} KB")
         self.lbl_lossy_stats.config(
             text=f"Ratio: {ratio:.2f} | Efficiency: {efficiency:.2f}% (Saved {diff/1024:.2f} KB)"
         )

@@ -88,11 +88,13 @@ class LossyTab(ttk.Frame):
         inner = tk.Frame(parent, bg=ModernStyle.BG_SECONDARY)
         inner.pack(fill="x", padx=20, pady=10)
         self.lbl_lossy_orig_size = tk.Label(
-            inner, text="Original Size: - KB", bg=ModernStyle.BG_SECONDARY
+            inner, text="Original: - bytes (- bits, - KB)", bg=ModernStyle.BG_SECONDARY
         )
         self.lbl_lossy_orig_size.pack(side="left", padx=10)
         self.lbl_lossy_comp_size = tk.Label(
-            inner, text="Compressed Size: - KB", bg=ModernStyle.BG_SECONDARY
+            inner,
+            text="Compressed: - bytes (- bits, - KB)",
+            bg=ModernStyle.BG_SECONDARY,
         )
         self.lbl_lossy_comp_size.pack(side="left", padx=10)
         self.lbl_lossy_stats = tk.Label(
@@ -152,8 +154,10 @@ class LossyTab(ttk.Frame):
             self.lossy_image = img
             file_size_bytes = os.path.getsize(filepath)
 
+            bits = file_size_bytes * 8
+            kb = file_size_bytes / 1024.0
             self.lbl_lossy_orig_size.config(
-                text=f"Original Size: {file_size_bytes/1024:.2f} KB"
+                text=f"Original: {file_size_bytes:,} bytes ({bits:,} bits, {kb:.2f} KB)"
             )
             self.lbl_lossy_comp_size.config(text="Compressed Size: -")
             self.lbl_lossy_stats.config(text="Ratio: - | Efficiency: -")
@@ -217,7 +221,11 @@ class LossyTab(ttk.Frame):
         efficiency = (1 - (comp_bytes / orig_bytes)) * 100
         diff = orig_bytes - comp_bytes
 
-        self.lbl_lossy_comp_size.config(text=f"Compressed: {comp_bytes/1024:.2f} KB")
+        comp_bits = comp_bytes * 8
+        comp_kb = comp_bytes / 1024.0
+        self.lbl_lossy_comp_size.config(
+            text=f"Compressed: {comp_bytes:,} bytes ({comp_bits:,} bits, {comp_kb:.2f} KB)"
+        )
         self.lbl_lossy_stats.config(
             text=f"Ratio: {ratio:.2f} | Efficiency: {efficiency:.2f}% (Saved {diff/1024:.2f} KB)"
         )

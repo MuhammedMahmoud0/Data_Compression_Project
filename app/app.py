@@ -475,10 +475,10 @@ class CompressionApp(TkinterDnD.Tk):
         stats_grid.pack(fill="x")
 
         self.lbl_file_before = self.create_stat_label(
-            stats_grid, "Size Before:", "- bits"
+            stats_grid, "Size Before:", "- bytes (- bits, - KB)"
         )
         self.lbl_file_after = self.create_stat_label(
-            stats_grid, "Size After:", "- bits"
+            stats_grid, "Size After:", "- bytes (- bits, - KB)"
         )
         self.lbl_ratio = self.create_stat_label(stats_grid, "Compression Ratio:", "-")
 
@@ -615,8 +615,17 @@ class CompressionApp(TkinterDnD.Tk):
             avg_length = compressed_bits / total_chars
         efficiency = ((entropy / avg_length) * 100) if avg_length > 0 else 0.0
         ratio = original_bits / compressed_bits if compressed_bits > 0 else 0
-        self.lbl_file_before.config(text=f"{original_bits:,}")
-        self.lbl_file_after.config(text=f"{compressed_bits:,}")
+        # convert bits -> bytes and KB for clearer display
+        orig_bytes = original_bits // 8
+        comp_bytes = compressed_bits // 8
+        orig_kb = orig_bytes / 1024.0
+        comp_kb = comp_bytes / 1024.0
+        self.lbl_file_before.config(
+            text=f"{orig_bytes:,} bytes ({original_bits:,} bits, {orig_kb:.2f} KB)"
+        )
+        self.lbl_file_after.config(
+            text=f"{comp_bytes:,} bytes ({compressed_bits:,} bits, {comp_kb:.2f} KB)"
+        )
         self.lbl_ratio.config(text=f"{ratio:.2f}")
         self.lbl_entropy.config(text=f"{entropy:.4f}")
         self.lbl_avg_len.config(text=f"{avg_length:.4f}")
